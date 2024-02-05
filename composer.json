@@ -1,0 +1,18 @@
+{
+    "name": "oldboy/parser",
+    "autoload": {
+        "psr-4": {
+            "Oldboy\\Parser\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "IgorOlikov",
+            "email": "i.olikov@mail.ru"
+        }
+    ],
+    "require": {
+        "fabpot/goutte": "^4.0",
+        "symfony/var-dumper": "^6.4"
+    }
+}
