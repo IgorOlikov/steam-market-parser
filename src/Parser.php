@@ -27,7 +27,7 @@ class Parser {
         $crawler = $this->client->request('GET',self::RUST_GAME_URL);
 
         dd($crawler->links());
-        $this->client->click()
+        //$this->client->click()
 
     }
 
