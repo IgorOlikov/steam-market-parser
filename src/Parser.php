@@ -1,11 +1,10 @@
 <?php
 
-
-
 namespace App;
 
 use Symfony\Component\BrowserKit\HttpBrowser;
 use App\Traits\SellsHandler;
+use Symfony\Component\DomCrawler\Crawler;
 
 class Parser {
 
@@ -22,28 +21,105 @@ class Parser {
     }
 
 
-    public function clicker()
+    public function execute()
     {
-        $crawler = $this->client->request('GET',self::RUST_GAME_URL);
+        $parsedData = $this->handleMarketApp(self::RUST_GAME_URL);
 
-        dd($crawler->links());
-        //$this->client->click()
-
+        dd($parsedData);
     }
 
-
-
-    public function execute(): array
+    public function handleMarketApp(string $appUrl)
     {
-        $crawler = $this->client->request('GET', 'https://steamcommunity.com/market/listings/252490/Tempered%20AK47');
+        $homeAppPage = $this->client->request('GET',$appUrl);
 
+        $this->handleItemPages($homeAppPage);
+    }
 
+    public function handleItemPages(Crawler $crawler)
+    {
+        $filterPage  = $crawler->filter('.market_listing_row_link')->each(function(Crawler $node){
 
+            $link = $node->link();
 
-        $sellsHistory = $crawler->text();
-        $sellsHistory = $this->handleSellsHistory($sellsHistory);
+            $itemPage = $this->client->click($link);
+            //handle fields of item
 
+            //$itemSellsHistory = $this->handleSellsHistory($itemPage->text());
 
-        return $sellsHistory;
+            //$itemUri = $itemPage->getUri();
+
+            //$itemName = $this->getItemName($itemPage);
+
+            $itemNameId = $this->getItemNameId($itemPage);
+
+            //dd($itemNameId);
+
+            $itemOrders = $this->getItemOrders($itemNameId);
+
+            dd($itemOrders);
+
+            dd($itemName);
+
+            dd($itemUri);
+
+            dd($itemSellsHistory);
+        });
+    }
+
+    public function getItemName(Crawler $crawler): string
+    {
+        return $crawler->filter('.market_listing_item_name')->text();
+    }
+
+    public function getItemNameId(Crawler $crawler): string
+    {
+        $string = explode('Market_LoadOrderSpread( ',$crawler->text());
+         $string  = explode(' );',$string[1]);
+         $itemNameId = $string[0];
+
+         return $itemNameId;
+    }
+
+    public function getItemOrders(string $itemNameId): array
+    {
+        $url = 'https://steamcommunity.com/market/itemordershistogram?country=US&language=english&currency=1&item_nameid=' . $itemNameId . '&two_factor=0';
+         $this->client->request('GET',$url);
+         $itemOrdersArray = $this->client->getResponse()->toArray();
+
+         $ordersToBuy = $this->deleteTrashFromOrders($itemOrdersArray['buy_order_graph']);
+         $ordersToSell = $this->deleteTrashFromOrders($itemOrdersArray['sell_order_graph']);
+         $highestOrderToBuy = $ordersToBuy[0][0];
+         $lowestOrderToSell = $ordersToSell[0][0];
+         $totalOrdersToBuy = (int)$this->handleTotalOrdersString($itemOrdersArray['buy_order_summary']);
+         $totalOrdersToSell = (int)$this->handleTotalOrdersString($itemOrdersArray['sell_order_summary']);
+
+        $itemOrders[] = [
+            'orders_to_buy' => $ordersToBuy,
+            'orders_to_sell' => $ordersToBuy,
+            'highest_order_to_buy' => $ordersToBuy,
+            'lowest_order_to_sell' => $ordersToBuy,
+            'total_orders_to_buy' => $ordersToBuy,
+            'total_orders_to_sell' => $ordersToBuy,
+        ];
+
+        return $itemOrders;
+    }
+
+    public function handleTotalOrdersString(string $string): string
+    {
+       $total = explode(' ',strip_tags($string), 2);
+
+        return $total[0];
+    }
+
+    public function deleteTrashFromOrders(array $orders): array
+    {
+       $arr = array_map(function ($key){
+                unset($key[2]);
+                  return $key;
+           }
+           ,$orders);
+
+       return $arr;
     }
 }

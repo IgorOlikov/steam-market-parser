@@ -9,4 +9,4 @@ $parser = new Parser();
 
 //$aa = $parser->execute();
 
-$parser->clicker();
+$parser->execute();
