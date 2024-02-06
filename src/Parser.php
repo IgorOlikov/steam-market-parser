@@ -32,7 +32,7 @@ class Parser {
     {
         $homeAppPage = $this->client->request('GET',$appUrl);
 
-        $this->handleItemPages($homeAppPage);
+        dd($this->handleItemPages($homeAppPage));
     }
 
     public function handleItemPages(Crawler $crawler)
@@ -42,28 +42,40 @@ class Parser {
             $link = $node->link();
 
             $itemPage = $this->client->click($link);
+
             //handle fields of item
 
-            //$itemSellsHistory = $this->handleSellsHistory($itemPage->text());
 
-            //$itemUri = $itemPage->getUri();
+            $itemUri = $itemPage->getUri();
 
-            //$itemName = $this->getItemName($itemPage);
+            $itemName = $this->getItemName($itemPage);
 
             $itemNameId = $this->getItemNameId($itemPage);
 
-            //dd($itemNameId);
-
             $itemOrders = $this->getItemOrders($itemNameId);
 
-            dd($itemOrders);
+            [$itemOrdersInfo,$itemOrders] = $itemOrders;
 
-            dd($itemName);
+            $itemSellsHistory = $this->handleSellsHistory($itemPage->text());
 
-            dd($itemUri);
+            echo "Iteration  ";
 
-            dd($itemSellsHistory);
+            $itemPageData[] = [
+                'name' => $itemName,
+                'highest_order_to_buy' => $itemOrdersInfo['highest_order_to_buy'],
+                'lowest_order_to_sell' => $itemOrdersInfo['lowest_order_to_sell'],
+                'total_orders_to_buy' => $itemOrdersInfo['total_orders_to_buy'],
+                'total_orders_to_sell' => $itemOrdersInfo['total_orders_to_sell'],
+                'url' => $itemUri,
+                'item_name_id' => $itemNameId,
+                'item_orders' => json_encode($itemOrders),
+                'sells_history' => json_encode($itemSellsHistory),
+            ];
+
+            dd($itemPageData);
         });
+        dd($filterPage);
+        return $itemPageData;
     }
 
     public function getItemName(Crawler $crawler): string
@@ -92,13 +104,15 @@ class Parser {
 
         $ordersToSell = $this->deleteTrashFromOrders($itemOrdersArray['sell_order_graph']);
 
-        $itemOrders[] = [
-            'highest_order_to_buy' => $ordersToBuy[0][0],
+        //0 =>
+        $itemOrders = [
+            ['highest_order_to_buy' => $ordersToBuy[0][0],
             'lowest_order_to_sell' => $ordersToSell[0][0],
             'total_orders_to_buy' => (int)$this->handleTotalOrdersString($itemOrdersArray['buy_order_summary']),
-            'total_orders_to_sell' => (int)$this->handleTotalOrdersString($itemOrdersArray['sell_order_summary']),
-            'orders_to_buy' => $ordersToBuy,
-            'orders_to_sell' => $ordersToSell,
+            'total_orders_to_sell' => (int)$this->handleTotalOrdersString($itemOrdersArray['sell_order_summary']),],
+
+            ['orders_to_buy' => $ordersToBuy,
+            'orders_to_sell' => $ordersToSell,]
         ];
 
         return $itemOrders;
