@@ -83,23 +83,22 @@ class Parser {
     public function getItemOrders(string $itemNameId): array
     {
         $url = 'https://steamcommunity.com/market/itemordershistogram?country=US&language=english&currency=1&item_nameid=' . $itemNameId . '&two_factor=0';
-         $this->client->request('GET',$url);
-         $itemOrdersArray = $this->client->getResponse()->toArray();
 
-         $ordersToBuy = $this->deleteTrashFromOrders($itemOrdersArray['buy_order_graph']);
-         $ordersToSell = $this->deleteTrashFromOrders($itemOrdersArray['sell_order_graph']);
-         $highestOrderToBuy = $ordersToBuy[0][0];
-         $lowestOrderToSell = $ordersToSell[0][0];
-         $totalOrdersToBuy = (int)$this->handleTotalOrdersString($itemOrdersArray['buy_order_summary']);
-         $totalOrdersToSell = (int)$this->handleTotalOrdersString($itemOrdersArray['sell_order_summary']);
+        $this->client->request('GET',$url);
+
+        $itemOrdersArray = $this->client->getResponse()->toArray();
+
+        $ordersToBuy = $this->deleteTrashFromOrders($itemOrdersArray['buy_order_graph']);
+
+        $ordersToSell = $this->deleteTrashFromOrders($itemOrdersArray['sell_order_graph']);
 
         $itemOrders[] = [
+            'highest_order_to_buy' => $ordersToBuy[0][0],
+            'lowest_order_to_sell' => $ordersToSell[0][0],
+            'total_orders_to_buy' => (int)$this->handleTotalOrdersString($itemOrdersArray['buy_order_summary']),
+            'total_orders_to_sell' => (int)$this->handleTotalOrdersString($itemOrdersArray['sell_order_summary']),
             'orders_to_buy' => $ordersToBuy,
-            'orders_to_sell' => $ordersToBuy,
-            'highest_order_to_buy' => $ordersToBuy,
-            'lowest_order_to_sell' => $ordersToBuy,
-            'total_orders_to_buy' => $ordersToBuy,
-            'total_orders_to_sell' => $ordersToBuy,
+            'orders_to_sell' => $ordersToSell,
         ];
 
         return $itemOrders;
