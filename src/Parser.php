@@ -33,6 +33,15 @@ class Parser {
     {
         $homeAppPage = $this->client->request('GET',$appUrl);
 
+        $totalPages = $this->getTotalPages($homeAppPage);
+
+        $i = 1;
+        while ($totalPages >= $i){
+            echo $totalPages . 'i=' . $i . PHP_EOL;
+            $i++;
+        }
+        exit();
+
          $parsedData = $this->handleItemPages($homeAppPage);
          echo "parsed data";
          file_put_contents('text.txt',json_encode($parsedData));
@@ -144,5 +153,14 @@ class Parser {
            ,$orders);
 
        return $arr;
+    }
+
+    public function getTotalPages(Crawler $homeAppPage)
+    {
+        $totalItems = str_replace(',','',$homeAppPage->filter('#searchResults_total')->text());
+        $totalPages = ($totalItems / 10);
+        $totalPages = (int)round($totalPages);
+
+        return $totalPages;
     }
 }
