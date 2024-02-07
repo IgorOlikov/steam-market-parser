@@ -28,24 +28,26 @@ class Parser {
         dd($parsedData);
     }
 
+
     public function handleMarketApp(string $appUrl)
     {
         $homeAppPage = $this->client->request('GET',$appUrl);
 
-        dd($this->handleItemPages($homeAppPage));
+         $parsedData = $this->handleItemPages($homeAppPage);
+         echo "parsed data";
+         file_put_contents('text.txt',json_encode($parsedData));
+         exit();
     }
 
-    public function handleItemPages(Crawler $crawler)
+    public function handleItemPages(Crawler $crawler): array
     {
-        $filterPage  = $crawler->filter('.market_listing_row_link')->each(function(Crawler $node){
+       $pageItems = $crawler->filter('.market_listing_row_link')->each(function(Crawler $node){
 
             $link = $node->link();
 
             $itemPage = $this->client->click($link);
 
             //handle fields of item
-
-
             $itemUri = $itemPage->getUri();
 
             $itemName = $this->getItemName($itemPage);
@@ -58,9 +60,9 @@ class Parser {
 
             $itemSellsHistory = $this->handleSellsHistory($itemPage->text());
 
-            echo "Iteration  ";
+            echo "Cycle Iteration ->";
 
-            $itemPageData[] = [
+            $itemPageData = [
                 'name' => $itemName,
                 'highest_order_to_buy' => $itemOrdersInfo['highest_order_to_buy'],
                 'lowest_order_to_sell' => $itemOrdersInfo['lowest_order_to_sell'],
@@ -72,15 +74,22 @@ class Parser {
                 'sells_history' => json_encode($itemSellsHistory),
             ];
 
-            dd($itemPageData);
+            return $itemPageData;
         });
-        dd($filterPage);
-        return $itemPageData;
+
+        return $pageItems;
     }
 
     public function getItemName(Crawler $crawler): string
     {
-        return $crawler->filter('.market_listing_item_name')->text();
+        $titleString = $crawler->filter('title')->text();
+        $name = explode('for ',$titleString);
+        $name = $name[1];
+
+       if (empty($name)){
+            throw new \Exception('NAME is EMPTY!!!');
+       }
+       return $name;
     }
 
     public function getItemNameId(Crawler $crawler): string
@@ -96,6 +105,8 @@ class Parser {
     {
         $url = 'https://steamcommunity.com/market/itemordershistogram?country=US&language=english&currency=1&item_nameid=' . $itemNameId . '&two_factor=0';
 
+        sleep(2);
+
         $this->client->request('GET',$url);
 
         $itemOrdersArray = $this->client->getResponse()->toArray();
@@ -104,7 +115,6 @@ class Parser {
 
         $ordersToSell = $this->deleteTrashFromOrders($itemOrdersArray['sell_order_graph']);
 
-        //0 =>
         $itemOrders = [
             ['highest_order_to_buy' => $ordersToBuy[0][0],
             'lowest_order_to_sell' => $ordersToSell[0][0],
