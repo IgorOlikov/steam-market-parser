@@ -10,47 +10,51 @@ class Parser {
 
     use SellsHandler;
 
-    const  RUST_GAME_URL = 'https://steamcommunity.com/market/search?appid=252490';
-
+    const STEAM_MARKET_URL = 'https://steamcommunity.com/market/search?';
+    const RUST_GAME_ID = 'appid=252490';
+    const FILTER_QUANTITY_ASC = '_quantity_asc';
+    const PAGE_PREFIX = '#p';
     public HttpBrowser $client;
-
 
     public function __construct()
     {
        $this->client = new HttpBrowser();
     }
 
-
     public function execute()
     {
-        $parsedData = $this->handleMarketApp(self::RUST_GAME_URL);
+        $parsedData = $this->handleMarketApp(self::STEAM_MARKET_URL,self::RUST_GAME_ID);
 
         dd($parsedData);
     }
 
-
-    public function handleMarketApp(string $appUrl)
+    public function handleMarketApp(string $marketUrl,$gameId)
     {
-        $homeAppPage = $this->client->request('GET',$appUrl);
+        $homeAppPage = $this->client->request('GET',$marketUrl . $gameId);
 
         $totalPages = $this->getTotalPages($homeAppPage);
 
         $i = 1;
         while ($totalPages >= $i){
-            echo $totalPages . 'i=' . $i . PHP_EOL;
+
+            sleep(mt_rand(5,10));
+
+            $marketPage = $this->client
+               ->request('GET',$marketUrl . $gameId . self::PAGE_PREFIX . $i . self::FILTER_QUANTITY_ASC);
+
+           $parsedData = $this->handleMarketPage($marketPage);
+            file_put_contents('text.txt',json_encode($parsedData));
             $i++;
         }
+        echo "exit!!!";
         exit();
-
-         $parsedData = $this->handleItemPages($homeAppPage);
-         echo "parsed data";
-         file_put_contents('text.txt',json_encode($parsedData));
-         exit();
     }
 
-    public function handleItemPages(Crawler $crawler): array
+    public function handleMarketPage(Crawler $crawler): array
     {
        $pageItems = $crawler->filter('.market_listing_row_link')->each(function(Crawler $node){
+
+           sleep(mt_rand(5,10));
 
             $link = $node->link();
 
@@ -69,8 +73,6 @@ class Parser {
 
             $itemSellsHistory = $this->handleSellsHistory($itemPage->text());
 
-            echo "Cycle Iteration ->";
-
             $itemPageData = [
                 'name' => $itemName,
                 'highest_order_to_buy' => $itemOrdersInfo['highest_order_to_buy'],
@@ -85,7 +87,7 @@ class Parser {
 
             return $itemPageData;
         });
-
+        echo "Current Page Parsed" . PHP_EOL;
         return $pageItems;
     }
 
@@ -104,17 +106,19 @@ class Parser {
     public function getItemNameId(Crawler $crawler): string
     {
         $string = explode('Market_LoadOrderSpread( ',$crawler->text());
-         $string  = explode(' );',$string[1]);
-         $itemNameId = $string[0];
 
-         return $itemNameId;
+        $string  = explode(' );',$string[1]);
+
+        $itemNameId = $string[0];
+
+        return $itemNameId;
     }
 
     public function getItemOrders(string $itemNameId): array
     {
         $url = 'https://steamcommunity.com/market/itemordershistogram?country=US&language=english&currency=1&item_nameid=' . $itemNameId . '&two_factor=0';
 
-        sleep(2);
+        sleep(mt_rand(5,10));
 
         $this->client->request('GET',$url);
 
@@ -158,7 +162,9 @@ class Parser {
     public function getTotalPages(Crawler $homeAppPage)
     {
         $totalItems = str_replace(',','',$homeAppPage->filter('#searchResults_total')->text());
+
         $totalPages = ($totalItems / 10);
+
         $totalPages = (int)round($totalPages);
 
         return $totalPages;
