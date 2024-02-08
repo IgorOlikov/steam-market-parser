@@ -1,16 +1,9 @@
 {
-    "name": "oldboy/parser",
     "autoload": {
         "psr-4": {
             "App\\": "src/"
         }
     },
-    "authors": [
-        {
-            "name": "IgorOlikov",
-            "email": "i.olikov@mail.ru"
-        }
-    ],
     "require": {
         "symfony/var-dumper": "^6.4",
         "symfony/browser-kit": "^6.4",

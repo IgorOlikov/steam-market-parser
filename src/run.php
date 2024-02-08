@@ -1,8 +1,11 @@
 <?php
 
+require_once '../vendor/autoload.php';
+
+
 use App\Parser;
 
-require_once '../vendor/autoload.php';
+
 
 
 $parser = new Parser();
